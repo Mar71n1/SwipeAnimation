@@ -3,8 +3,12 @@ package pl.pwr.swipeanimation;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GestureDetectorCompat;
 
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -14,65 +18,31 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity implements GestureDetector.OnGestureListener {
 
-    private ImageView imageView;
+    private ImageView imageView1, imageView2;
     private int frameNumber = 360;
     private Handler handler;
     private static final String DEBUG_TAG = "Gestures";
     private GestureDetectorCompat mDetector;
+    private int screenWidth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        imageView = findViewById(R.id.frame);
+        imageView1 = findViewById(R.id.frame1);
+        imageView2 = findViewById(R.id.frame2);
+        //imageView.setVisibility(View.INVISIBLE);
         // Instantiate the gesture detector with the
         // application context and an implementation of
         // GestureDetector.OnGestureListener
         mDetector = new GestureDetectorCompat(this,this);
 
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        screenWidth = displayMetrics.widthPixels;
 
-//        imageView.setOnTouchListener(new OnSwipeTouchListener(MainActivity.this) {
-//            public void onSwipeRight() {
-//                Toast.makeText(MainActivity.this, "right", Toast.LENGTH_SHORT).show();
-//                handler = new Handler();
-//
-//                final Runnable runnable = new Runnable() {
-//                    int count = 0;
-//                    public void run() {
-//                        if (count++ < 60) {
-//                            if(frameNumber == 360)
-//                                frameNumber = 660;
-//                            else
-//                                frameNumber--;
-//                            imageView.setImageResource(getResources().getIdentifier("frame0" + frameNumber, "drawable", getPackageName()));
-//                            handler.postDelayed(this, 1);
-//                        }
-//                    }
-//                };
-//
-//                handler.post(runnable);
-//            }
-//            public void onSwipeLeft() {
-//                Toast.makeText(MainActivity.this, "left", Toast.LENGTH_SHORT).show();
-//                handler = new Handler();
-//
-//                final Runnable runnable = new Runnable() {
-//                    int count = 0;
-//                    public void run() {
-//                        if (count++ < 60) {
-//                            if(frameNumber == 660)
-//                                frameNumber = 360;
-//                            else
-//                                frameNumber++;
-//                            imageView.setImageResource(getResources().getIdentifier("frame0" + frameNumber, "drawable", getPackageName()));
-//                            handler.postDelayed(this, 1);
-//                        }
-//                    }
-//                };
-//
-//                handler.post(runnable);
-//            }
-//        });
+        handler = new Handler();
+        handler.post(showRed);
     }
 
     @Override
@@ -103,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
 
     @Override
     public boolean onDown(MotionEvent event) {
-        //Log.d(DEBUG_TAG,"onDown: " + event.toString());
+        Log.d(DEBUG_TAG,"onDown: " + event.toString());
         return true;
     }
 
@@ -122,38 +92,12 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
     @Override
     public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX,
                             float distanceY) {
-        Log.d(DEBUG_TAG, "onScroll.distanceX: " + distanceX + ", onScroll.distanceY:" + distanceY);
-
-        //int distance = (int) distanceX;
+        Log.d(DEBUG_TAG, "onScroll.distanceX: " + distanceX + ", onScroll.distanceY:" + distanceY + ", event1: " + event1.toString() + ", event2: " + event2.toString());
         if(distanceX < 0) {
-            for(int i = 0; i < 5; i++) {
-                if(frameNumber == 360)
-                    frameNumber = 300;
-                else
-                    frameNumber--;
-                imageView.setImageResource(getResources().getIdentifier("frame0" + frameNumber, "drawable", getPackageName()));
-            }
+            handler.post(frameDown);
         } else if (distanceX > 0) {
-            handler = new Handler();
-
-            final Runnable runnable = new Runnable() {
-                int count = 0;
-                public void run() {
-                    if (count++ < 5) {
-                        if(frameNumber == 660)
-                            frameNumber = 360;
-                        else
-                            frameNumber++;
-                        imageView.setImageResource(getResources().getIdentifier("frame0" + frameNumber, "drawable", getPackageName()));
-                        handler.postDelayed(this, 1);
-                    }
-                }
-            };
-
-            handler.post(runnable);
+            handler.post(frameUp);
         }
-
-
         return true;
     }
 
@@ -164,7 +108,58 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
 
     @Override
     public boolean onSingleTapUp(MotionEvent event) {
-        //Log.d(DEBUG_TAG, "onSingleTapUp: " + event.toString());
+        Bitmap bitmap = ((BitmapDrawable)imageView2.getDrawable()).getBitmap();
+        try {
+            int pixel = bitmap.getPixel(((int)event.getX() - (screenWidth - 1920))/2, (int)event.getY());
+            Log.d(DEBUG_TAG, "onSingleTapUp: " + ((int)event.getX() - ((screenWidth - 1920))) + ", " + (int)event.getX() + ", " + Color.red(pixel) + ", " + Color.blue(pixel) + ", " + Color.green(pixel));
+
+            if(100 < Color.red(pixel) && Color.blue(pixel) < 100 && Color.green(pixel) < 100)
+                Toast.makeText(this, "Kliknięto czerwone", Toast.LENGTH_SHORT).show();
+        } catch (Exception ex) { }
+
         return true;
     }
+
+    Runnable frameUp = new Runnable() {
+        @Override
+        public void run() {
+            if (frameNumber == 660)
+                frameNumber = 360;
+            else
+                frameNumber += 3;
+
+            imageView1.setImageResource(getResources().getIdentifier("frame0" + frameNumber, "drawable", getPackageName()));
+            imageView2.setImageResource(getResources().getIdentifier("framered0" + frameNumber, "drawable", getPackageName()));
+        }
+    };
+
+    Runnable frameDown = new Runnable() {
+        @Override
+        public void run() {
+            if(frameNumber == 360)
+                frameNumber = 660;
+            else
+                frameNumber -= 3;
+
+            imageView1.setImageResource(getResources().getIdentifier("frame0" + frameNumber, "drawable", getPackageName()));
+            imageView2.setImageResource(getResources().getIdentifier("framered0" + frameNumber, "drawable", getPackageName()));
+        }
+    };
+
+    Runnable showRed = new Runnable() {
+        @Override
+        public void run() {
+            //imageView2.setImageResource(getResources().getIdentifier("framered0" + frameNumber, "drawable", getPackageName()));
+            imageView2.setVisibility(View.VISIBLE);
+            handler.postDelayed(hideRed, 200);
+        }
+    };
+
+    Runnable hideRed = new Runnable() {
+        @Override
+        public void run() {
+            imageView2.setVisibility(View.INVISIBLE);
+            handler.postDelayed(showRed, 800);
+        }
+    };
 }
